@@ -1,97 +1,134 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-
-st.set_page_config(page_title="AI Yogurt Digital Twin", layout="centered")
-
-st.title("🥛 AI + IoT Yogurt Digital Twin System")
-
-st.markdown("نظام ذكي لمحاكاة جودة الزبادي أثناء التخزين باستخدام الذكاء الاصطناعي والتوأم الرقمي")
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
 
 # =========================
-# Sensors (Simulation)
+# PAGE CONFIG (Startup Style)
 # =========================
-temp = st.slider("🌡 Temperature (°C)", 2, 15, 4)
-humidity = st.slider("💧 Humidity (%)", 50, 90, 70)
-
-# =========================
-# AI MODEL
-# =========================
-def model(day, temp, humidity):
-    quality = 100 - (day * 2.3) - (temp - 4) * 3 - (humidity - 70) * 0.2
-    quality = max(0, quality)
-
-    ph = 4.6 - (day * 0.03) - (temp - 4) * 0.02
-    ph = max(3.3, ph)
-
-    risk = 100 - quality
-
-    return quality, ph, risk
-
+st.set_page_config(
+    page_title="FoodAI Startup",
+    layout="wide",
+    page_icon="🚀"
+)
 
 # =========================
-# SIMULATION
+# LANDING (Investor View)
+# =========================
+st.title("🚀 FoodAI – Smart Food Intelligence Platform")
+
+st.markdown("""
+### 💡 Investment-Ready AI Startup
+FoodAI is a Digital Twin + AI platform that predicts food spoilage 
+and optimizes cold chain logistics in real time.
+
+---
+
+#### 🔴 Problem
+- Food waste exceeds billions annually
+- No predictive system for freshness
+
+#### 🟢 Solution
+- AI-based shelf-life prediction
+- IoT sensor integration
+- Real-time monitoring dashboard
+
+---
+""")
+
+st.divider()
+
+# =========================
+# SIDEBAR
+# =========================
+st.sidebar.title("⚙ System Control")
+
+product = st.sidebar.selectbox("Product Type", ["Yogurt", "Milk", "Juice"])
+temp = st.sidebar.slider("Temperature (°C)", 2, 15, 4)
+humidity = st.sidebar.slider("Humidity (%)", 50, 90, 70)
+
+# =========================
+# DATA + AI MODEL
+# =========================
+np.random.seed(42)
+
+data = []
+for t in range(4, 13):
+    for d in range(1, 22):
+        q = 100 - (d * 2.3) - (t - 4) * 3 + np.random.normal(0, 1)
+        q = max(0, q)
+        data.append([d, t, q])
+
+df = pd.DataFrame(data, columns=["Day", "Temp", "Quality"])
+
+X = df[["Day", "Temp"]]
+y = df["Quality"]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+model = RandomForestRegressor(n_estimators=500, random_state=42)
+model.fit(X_scaled, y)
+
+# =========================
+# PREDICTION ENGINE
 # =========================
 days = np.arange(1, 22)
 
-q_list = []
-ph_list = []
-risk_list = []
-
-for d in days:
-    q, p, r = model(d, temp, humidity)
-    q_list.append(q)
-    ph_list.append(p)
-    risk_list.append(r)
-
-df = pd.DataFrame({
+input_scaled = scaler.transform(pd.DataFrame({
     "Day": days,
-    "Quality": q_list,
-    "pH": ph_list,
-    "Risk": risk_list
-})
+    "Temp": [temp] * len(days)
+}))
+
+pred = model.predict(input_scaled)
+
+final_quality = pred[-1]
+shelf_life = len([x for x in pred if x > 60])
+risk = 100 - final_quality
 
 # =========================
-# RESULTS
+# INVESTOR KPIs
 # =========================
-final_quality = df["Quality"].iloc[-1]
-shelf_life = len(df[df["Quality"] > 60])
+st.markdown("## 📊 Key Performance Indicators")
 
-if final_quality > 80:
-    status = "Excellent 🟢"
-elif final_quality > 60:
-    status = "Good 🟡"
-elif final_quality > 40:
-    status = "Risky 🟠"
+c1, c2, c3, c4 = st.columns(4)
+
+c1.metric("Expected Shelf Life", f"{shelf_life} days")
+c2.metric("Quality Score", f"{final_quality:.2f}%")
+c3.metric("Risk Level", f"{risk:.2f}%")
+c4.metric("Product", product)
+
+st.divider()
+
+# =========================
+# INSIGHTS (INVESTOR VALUE)
+# =========================
+st.subheader("📈 Business Insight")
+
+if final_quality > 70:
+    st.success("High commercial viability – suitable for cold chain optimization markets")
+elif final_quality > 50:
+    st.warning("Moderate risk – requires monitoring optimization")
 else:
-    status = "Spoiled 🔴"
+    st.error("High spoilage risk – critical market opportunity")
 
 # =========================
 # DASHBOARD
 # =========================
-st.subheader("📊 Results Dashboard")
+tab1, tab2, tab3 = st.tabs(["📊 AI Forecast", "⚠ Risk Analysis", "📁 Data Model"])
 
-col1, col2, col3 = st.columns(3)
+with tab1:
+    st.line_chart(pred)
 
-col1.metric("Quality %", round(final_quality, 2))
-col2.metric("Shelf Life (Days)", shelf_life)
-col3.metric("Risk Level", status)
+with tab2:
+    st.line_chart(100 - pred)
 
-st.divider()
+with tab3:
+    st.dataframe(df)
 
 # =========================
-# CHARTS
+# FOOTER (INVESTOR BRANDING)
 # =========================
-st.subheader("📉 Quality Over Time")
-st.line_chart(df["Quality"])
-
-st.subheader("🦠 Spoilage Risk")
-st.line_chart(df["Risk"])
-
-st.subheader("⚗️ pH Change Over Time")
-st.line_chart(df["pH"])
-
-st.divider()
-
-st.subheader("📄 Data Table")
-st.dataframe(df)
+st.markdown("---")
+st.caption("FoodAI Startup © 2026 | Investment Prototype | AI + Digital Twin for Food Industry")
